@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor - Históricos</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #606c88;
+            background: -webkit-linear-gradient(to right, #3f4c6b, #606c88);
+            background: linear-gradient(to right, #3f4c6b, #606c88);
+            min-height: 100vh;
+            font-family: 'Ubuntu', sans-serif;
+            font-weight: 300;
+            color: #fff;
+            font-size: 0.9rem;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .glass-loader {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 2rem;
+            border-radius: 24px;
+            width: 220px;
+            text-align: center;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        .spinner-container {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1rem;
+        }
+
+        .spinner-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+
+        .spinner-progress {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 3px solid transparent;
+            border-top-color: darkorange;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .percent-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: 500;
+            color: darkorange;
+            font-size: 0.9rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .pagination-btn {
+            padding: 4px 10px;
+            margin: 0 2px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            transition: all 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.8rem;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: rgba(255, 140, 0, 0.2);
+            border-color: darkorange;
+        }
+
+        .pagination-btn.active {
+            background: darkorange;
+            color: #fff;
+            font-weight: 500;
+            border-color: darkorange;
+        }
+
+        input, textarea {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: white;
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 0.85rem;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: darkorange;
+        }
+
+        .btn-primary {
+            background: darkorange;
+            color: #fff;
+            font-weight: 500;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+
+        .btn-primary:hover {
+            background: #ff9d00;
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s;
+            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        table {
+            font-size: 0.85rem;
+        }
+
+        th {
+            font-weight: 500;
+            letter-spacing: 0.05em;
+        }
+
+        .title-main {
+            font-size: 1.75rem;
+            font-weight: 400;
+            letter-spacing: -0.02em;
+        }
+
+        /* Estilo para o Popup de Sucesso */
+        .success-popup {
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(34, 197, 94, 0.5);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+
+    <div id="loader" class="loader-overlay">
+        <div class="glass-loader">
+            <div class="spinner-container">
+                <div class="spinner-ring"></div>
+                <div class="spinner-progress"></div>
+                <div class="percent-text" id="loader-percent">0%</div>
+            </div>
+            <p id="loader-text" class="text-xs opacity-80">Processando...</p>
+        </div>
+    </div>
+
+    <!-- Modal Inicial -->
+    <div id="initial-modal" class="modal-overlay">
+        <div class="glass-card p-6 max-w-sm w-full text-center">
+            <h2 class="text-xl font-medium mb-1">Conversor - Históricos</h2>
+            <p class="mb-5 opacity-60 text-xs">Selecione o arquivo PDF para extração</p>
+            <input type="file" id="pdf-upload" accept=".pdf" class="hidden">
+            <button onclick="document.getElementById('pdf-upload').click()" class="btn-primary px-5 py-2.5 rounded-lg w-full flex items-center justify-center gap-2">
+                <i class="fas fa-file-pdf"></i> Selecionar PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Popup de Sucesso -->
+    <div id="success-modal" class="modal-overlay hidden">
+        <div class="success-popup">
+            <div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-check text-green-500 text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-medium mb-2">Arquivo gerado com sucesso!</h3>
+            <p class="text-sm opacity-70 mb-6">O arquivo foi salvo na sua pasta de downloads.</p>
+            
+            <div class="bg-white/5 border border-white/10 rounded-lg p-3 mb-6 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <i class="fas fa-folder-open text-orange-400"></i>
+                    <span class="text-xs opacity-60 truncate" id="folder-path">Downloads/importar_historicos.txt</span>
+                </div>
+                <button onclick="openFolder()" class="text-orange-400 hover:text-orange-300 transition-colors" title="Acessar pasta">
+                    <i class="fas fa-external-link-alt"></i>
+                </button>
+            </div>
+
+            <button onclick="closeSuccessModal()" class="btn-primary w-full py-2.5 rounded-lg">OK</button>
+        </div>
+    </div>
+
+    <div class="max-w-4xl mx-auto">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <div class="flex flex-col">
+                <h1 class="title-main text-white">Conversor - Históricos</h1>
+                <span id="historicos-count" class="text-xs opacity-50 font-medium uppercase tracking-wider">0 Históricos Importados</span>
+            </div>
+            <div class="flex flex-wrap justify-center gap-2">
+                <a href="https://raw.githubusercontent.com/iramalho1980/historicos_contabeis/019931a48cea2420a7112ff9828952a219b72dd1/conj_dados_historicos.xml" 
+                   download="conj_dados_historicos.xml"
+                   class="btn-outline px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+                   title="Baixar XML do GitHub">
+                    <i class="fab fa-github"></i> XML
+                </a>
+                <button onclick="showImportModal()" class="btn-outline px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                    <i class="fas fa-plus"></i> Novo
+                </button>
+                <button onclick="generateTxt()" class="btn-primary px-4 py-1.5 rounded-lg flex items-center gap-1.5">
+                    <i class="fas fa-download"></i> GERAR TXT
+                </button>
+            </div>
+        </header>
+
+        <div class="glass-card overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-white/5 border-b border-white/10">
+                            <th class="p-3 w-20 text-xs uppercase opacity-50">Código</th>
+                            <th class="p-3 text-xs uppercase opacity-50">Descrição</th>
+                            <th class="p-3 w-24 text-center text-xs uppercase opacity-50">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historicos-list">
+                        <!-- Dinâmico -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="pagination" class="p-3 border-t border-white/10 flex justify-center items-center gap-1">
+                <!-- Dinâmico -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Edição -->
+    <div id="edit-modal" class="modal-overlay hidden">
+        <div class="glass-card p-6 max-w-md w-full">
+            <h2 class="text-lg font-medium mb-4 flex items-center gap-2">
+                <i class="fas fa-edit text-orange-400"></i> Editar Histórico
+            </h2>
+            <div class="flex flex-col gap-4">
+                <div>
+                    <label class="block text-xs font-medium uppercase opacity-40 mb-1.5">Código</label>
+                    <input type="text" id="edit-codigo" class="w-full opacity-50" readonly>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium uppercase opacity-40 mb-1.5">Descrição</label>
+                    <textarea id="edit-descricao" class="w-full h-28 resize-none" rows="4"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 mt-1">
+                    <button onclick="closeEditModal()" class="btn-outline px-4 py-1.5 rounded-lg">Cancelar</button>
+                    <button onclick="saveEdit()" class="btn-primary px-6 py-1.5 rounded-lg">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        let allHistoricos = JSON.parse(localStorage.getItem('historicos_data') || '[]');
+        let currentPage = 1;
+        const itemsPerPage = 12; 
+        let editingIndex = -1;
+
+        window.onload = () => {
+            if (allHistoricos.length > 0) {
+                document.getElementById('initial-modal').style.display = 'none';
+                renderHistoricos();
+            }
+        };
+
+        function saveToStorage() {
+            localStorage.setItem('historicos_data', JSON.stringify(allHistoricos));
+        }
+
+        async function showLoader(text) {
+            const loader = document.getElementById('loader');
+            const loaderText = document.getElementById('loader-text');
+            const loaderPercent = document.getElementById('loader-percent');
+            
+            loaderText.innerText = text;
+            loaderPercent.innerText = '0%';
+            loader.style.display = 'flex';
+            
+            for (let i = 0; i <= 100; i += 4) {
+                loaderPercent.innerText = `${i}%`;
+                await new Promise(r => setTimeout(r, 10));
+            }
+        }
+
+        function hideLoader() {
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        /**
+         * Remove estritamente apenas a acentuação, preservando TODOS os outros caracteres.
+         */
+        function removeAccentsOnly(text) {
+            if (!text) return "";
+            return text
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/ç/g, "c")
+                .replace(/Ç/g, "C");
+        }
+
+        /**
+         * Normalização: Remove apenas acentos e limpa espaços extras.
+         */
+        function normalizeText(text) {
+            // Remove apenas acentos, preservando vírgulas, pontos e caracteres especiais
+            const withoutAccents = removeAccentsOnly(text);
+            
+            return withoutAccents
+                .replace(/\s+/g, " ") // Normaliza espaços múltiplos
+                .trim();
+        }
+
+        document.getElementById('pdf-upload').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('initial-modal').style.display = 'none';
+            const loader = document.getElementById('loader');
+            const loaderText = document.getElementById('loader-text');
+            const loaderPercent = document.getElementById('loader-percent');
+            
+            loaderText.innerText = 'Lendo PDF...';
+            loaderPercent.innerText = '0%';
+            loader.style.display = 'flex';
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                let extractedData = [];
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const lines = processTextItems(textContent.items);
+                    extractedData = extractedData.concat(parseLines(lines));
+                    
+                    const progress = (i / pdf.numPages) * 100;
+                    loaderPercent.innerText = `${Math.round(progress)}%`;
+                }
+
+                allHistoricos = extractedData;
+                saveToStorage();
+                renderHistoricos();
+                setTimeout(hideLoader, 400);
+            } catch (error) {
+                console.error(error);
+                alert('Erro ao processar PDF');
+                hideLoader();
+                document.getElementById('initial-modal').style.display = 'flex';
+            }
+        });
+
+        function processTextItems(items) {
+            const linesMap = {};
+            items.forEach(item => {
+                const y = Math.round(item.transform[5]);
+                if (!linesMap[y]) linesMap[y] = [];
+                linesMap[y].push(item);
+            });
+            const sortedY = Object.keys(linesMap).sort((a, b) => b - a);
+            return sortedY.map(y => {
+                return linesMap[y].sort((a, b) => a.transform[4] - b.transform[4])
+                                  .map(item => item.str)
+                                  .join(' ');
+            });
+        }
+
+        function parseLines(lines) {
+            const results = [];
+            // Regex para capturar código de 4 dígitos e a descrição
+            // O código da empresa geralmente vem seguido do nome em letras maiúsculas
+            // Os históricos legítimos começam com 4 dígitos seguidos de espaços e descrição
+            const regex = /^(\d{4})\s{2,}(.+)$/;
+            
+            lines.forEach(line => {
+                const trimmedLine = line.trim();
+                
+                // Ignorar cabeçalhos conhecidos
+                if (trimmedLine.includes("LISTAGEM DE HISTORICOS") || 
+                    trimmedLine.includes("FOLHA:") || 
+                    trimmedLine.includes("CODIGO   DESCRICAO") ||
+                    trimmedLine.includes("DATA:")) {
+                    return;
+                }
+
+                const match = trimmedLine.match(regex);
+                if (match) {
+                    const codigo = match[1];
+                    let descricao = match[2];
+                    
+                    // Se a descrição contiver o nome da empresa (geralmente em maiúsculas logo após o código 0099)
+                    // podemos filtrar pelo código específico se soubermos que 0099 é a empresa, 
+                    // ou validar se a descrição parece um nome de empresa.
+                    // O usuário mencionou especificamente o código 0099.
+                    if (codigo === "0099") {
+                        return;
+                    }
+
+                    // Limpa a descrição pegando apenas a parte relevante antes de grandes espaços (que seriam outras colunas)
+                    let cleanDesc = descricao.split(/\s{3,}/)[0]
+                                    .replace(/\s+/g, " ")
+                                    .trim();
+                    
+                    if (cleanDesc) {
+                        results.push({ codigo: codigo, descricao: cleanDesc });
+                    }
+                }
+            });
+            return results;
+        }
+
+        function renderHistoricos() {
+            const tbody = document.getElementById('historicos-list');
+            const countElement = document.getElementById('historicos-count');
+            
+            if (countElement) {
+                countElement.innerText = `${allHistoricos.length} Históricos Importados`;
+            }
+            
+            tbody.innerHTML = '';
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const paginatedItems = allHistoricos.slice(start, end);
+
+            paginatedItems.forEach((item, index) => {
+                const actualIndex = start + index;
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-white/5 hover:bg-white/5 transition-all';
+                tr.innerHTML = `
+                    <td class="p-3 font-mono text-orange-300 font-medium">${item.codigo}</td>
+                    <td class="p-3 opacity-80">${item.descricao}</td>
+                    <td class="p-3 text-center">
+                        <div class="flex justify-center gap-1">
+                            <button onclick="editItem(${actualIndex})" class="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/10 text-orange-300 transition-colors"><i class="fas fa-edit fa-xs"></i></button>
+                            <button onclick="deleteItem(${actualIndex})" class="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/10 text-red-300 transition-colors"><i class="fas fa-trash fa-xs"></i></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            renderPagination();
+        }
+
+        function renderPagination() {
+            const container = document.getElementById('pagination');
+            container.innerHTML = '';
+            const totalPages = Math.ceil(allHistoricos.length / itemsPerPage);
+            if (totalPages <= 1) return;
+
+            const prev = document.createElement('button');
+            prev.className = 'pagination-btn';
+            prev.innerHTML = '<i class="fas fa-chevron-left"></i>';
+            prev.disabled = currentPage === 1;
+            prev.onclick = () => { currentPage--; renderHistoricos(); };
+            container.appendChild(prev);
+
+            let startPage = Math.max(1, currentPage - 1);
+            let endPage = Math.min(totalPages, startPage + 2);
+            if (endPage - startPage < 2) startPage = Math.max(1, endPage - 2);
+
+            for (let i = startPage; i <= endPage; i++) {
+                const btn = document.createElement('button');
+                btn.className = `pagination-btn ${i === currentPage ? 'active' : ''}`;
+                btn.innerText = i;
+                btn.onclick = () => { currentPage = i; renderHistoricos(); };
+                container.appendChild(btn);
+            }
+
+            const next = document.createElement('button');
+            next.className = 'pagination-btn';
+            next.innerHTML = '<i class="fas fa-chevron-right"></i>';
+            next.disabled = currentPage === totalPages;
+            next.onclick = () => { currentPage++; renderHistoricos(); };
+            container.appendChild(next);
+        }
+
+        function deleteItem(index) {
+            if (confirm('Excluir este histórico?')) {
+                allHistoricos.splice(index, 1);
+                saveToStorage();
+                renderHistoricos();
+            }
+        }
+
+        function editItem(index) {
+            editingIndex = index;
+            const item = allHistoricos[index];
+            document.getElementById('edit-codigo').value = item.codigo;
+            document.getElementById('edit-descricao').value = item.descricao;
+            document.getElementById('edit-modal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').classList.add('hidden');
+            editingIndex = -1;
+        }
+
+        async function saveEdit() {
+            const newDesc = document.getElementById('edit-descricao').value;
+            await showLoader('Salvando...');
+            allHistoricos[editingIndex].descricao = newDesc;
+            saveToStorage();
+            renderHistoricos();
+            setTimeout(() => {
+                hideLoader();
+                closeEditModal();
+            }, 300);
+        }
+
+        function showImportModal() {
+            document.getElementById('pdf-upload').value = '';
+            document.getElementById('initial-modal').style.display = 'flex';
+        }
+
+        function showSuccessModal() {
+            document.getElementById('success-modal').classList.remove('hidden');
+        }
+
+        function closeSuccessModal() {
+            document.getElementById('success-modal').classList.add('hidden');
+        }
+
+        function openFolder() {
+            alert('O arquivo foi salvo na sua pasta padrão de "Downloads". Por segurança do navegador, não é possível abrir a pasta automaticamente.');
+        }
+
+        async function generateTxt() {
+            if (allHistoricos.length === 0) {
+                alert('Sem dados.');
+                return;
+            }
+
+            await showLoader('Gerando TXT...');
+
+            // Gera o conteúdo removendo apenas acentos e usando vírgula como separador
+            const content = allHistoricos.map(h => {
+                const cleanDesc = removeAccentsOnly(h.descricao);
+                return `${h.codigo},${cleanDesc}`;
+            }).join('\r\n');
+
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'importar_historicos.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            setTimeout(() => {
+                hideLoader();
+                showSuccessModal();
+            }, 400);
+        }
+    </script>
+</body>
+</html>
